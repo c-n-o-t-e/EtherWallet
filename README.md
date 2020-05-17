@@ -1,5 +1,5 @@
 # EtherWallet
-A simple ether wallet that let you send funds
+A simple ether wallet that let you deposit and send funds
 
 run 
 npm install
