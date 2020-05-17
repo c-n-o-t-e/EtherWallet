@@ -1,77 +1,81 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import EtherWallet from './contracts/EtherWallet.json';
 import { getWeb3 } from './utils.js';
 //import './App.css';
 
-class App extends Component {
-  state = {
-    web3: undefined,
-    accounts: [],
-    currentAccount: undefined,
-    contract: undefined,
-    balance: undefined
-  }
+function App() {
+  const [web3, setWeb3] = useState(undefined);
+  const [accounts, setAccounts] = useState(undefined);
+  const [currentAccount, setCurrentAccount] = useState(undefined);
+  const [contract, setContract] = useState(undefined);
+  const [balance, setBalance] = useState(undefined);
+  
 
-  async componentDidMount() {
+  useEffect(() => {
+    const init = async () => {
     const web3 = await getWeb3();
     const accounts = await web3.eth.getAccounts();
 
-    // const networkId = await web3.eth.net.getId();
-    // const deployedNetwork = EtherWallet.networks[networkId];
-    // const contract = new web3.eth.Contract(
-    //   EtherWallet.abi,
-    //   deployedNetwork && deployedNetwork.address,
-    // );
-    const deploymentKey = Object.keys(EtherWallet.networks)[0];
-  const contract = new web3.eth.Contract(
-    EtherWallet.abi,
-    EtherWallet
-      .networks[deploymentKey]
-      .address
-  );
+    const networkId = await web3.eth.net.getId();
+    const deployedNetwork = EtherWallet.networks[networkId];
+    const contract = new web3.eth.Contract(
+      EtherWallet.abi,
+      deployedNetwork && deployedNetwork.address,
+    );
+  
+    setWeb3(web3);
+    setAccounts(accounts);
+    setContract(contract);
+  }
+  init();
+    window.ethereum.on('accountsChanged', accounts => {
+      setAccounts(accounts);
+    });
+}, []);
 
+  useEffect(() => {
+    if(typeof contract !== 'undefined' && typeof web3 !== 'undefined') {
+      updateBalance();
+    }
+  }, [accounts, contract, web3]);
 
-    this.setState({ web3, accounts, contract });
-  };
-
-  async updateBalance() {
-    const { contract } = this.state;
+  async function updateBalance() {
     const balance = await contract.methods.balanceOf().call();
-    this.setState({ balance });
+   setBalance(balance);
   };
 
-  async deposit(e) {
+  async function deposit(e) {
     e.preventDefault();
-    const { contract, accounts } = this.state;
     await contract.methods.deposit().send({
       from: accounts[0], 
       value: e.target.elements[0].value
     });
-    this.updateBalance();
+    await updateBalance();
   }
 
-  async send(e) {
+  async function send(e) {
     e.preventDefault();
-    const { contract, accounts } = this.state;
-    await contract.methods.send(e.target.elements[0].value, e.target.elements[1].value).send({
+    const address = e.target.elements[0].value;
+    const amount =  e.target.elements[1].value;
+    await contract.methods.send(address, amount).send({
       from: accounts[0]
     });
-    this.updateBalance();
+    await updateBalance();
   }
 
-  render() {
-    if (!this.state.web3) {
+  
+    if (!web3) {
       return <div>Loading...</div>;
     }
 
-      const { balance } = this.state;
+      ///const { balance } = this.state;
 
      return (
       <div>
         <h1>EtherWallet</h1>
 
         <div>
-            <form onSubmit={e => this.deposit(e)} >
+            <form onSubmit={e => deposit(e)} >
               <div>
                 <label><h2>Deposit</h2></label>
                 <input  type="number"  placeholder="enter amount" />
@@ -84,7 +88,7 @@ class App extends Component {
         
 
         <div>
-            <form onSubmit={e => this.send(e)}>
+            <form onSubmit={e => send(e)}>
               <div>
                 <label><h2>Send</h2></label> 
                 <input type=""  placeholder="enter address" />
@@ -99,8 +103,7 @@ class App extends Component {
 
       </div>
     );
-  }
-}
+    }
 
 export default App;
   
